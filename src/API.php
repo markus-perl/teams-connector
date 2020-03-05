@@ -32,8 +32,8 @@ class API
             CURLOPT_CUSTOMREQUEST => 'POST',
             CURLOPT_SAFE_UPLOAD => true,
             CURLOPT_POSTFIELDS => $json,
-            CURLOPT_CONNECTTIMEOUT => 2,
-            CURLOPT_TIMEOUT => 5,
+            CURLOPT_CONNECTTIMEOUT => 5,
+            CURLOPT_TIMEOUT => 15,
             CURLOPT_HTTPHEADER => [
                 'Content-Type: application/json',
                 'Content-Length: ' . strlen($json)

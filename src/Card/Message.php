@@ -4,6 +4,7 @@ namespace TeamsConnector\Card;
 
 
 use TeamsConnector\CardInterface;
+use TeamsConnector\Exception;
 
 class Message implements CardInterface
 {
@@ -12,8 +13,18 @@ class Message implements CardInterface
 
     private $text;
 
+    /**
+     * Message constructor.
+     * @param string $title
+     * @param string $text
+     * @throws Exception
+     */
     public function __construct(string $title, string $text)
     {
+        if (mb_strlen($title) < 1 || mb_strlen($text) < 1) {
+            throw new Exception('title and text must be set with a minimum length of 1');
+        }
+
         $this->title = $title;
         $this->text = $text;
     }
