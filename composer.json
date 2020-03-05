@@ -1,0 +1,19 @@
+{
+  "name": "markus-perl/teams-connector",
+  "description": "Simple PHP Teams integration to post cards",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Markus Perl",
+      "email": "no@e.mail"
+    }
+  ],
+  "require": {
+    "php": "^7.2",
+  },
+  "autoload": {
+    "psr-4": {
+      "TeamsConnector\\": "src/"
+    }
+  },
+}
