@@ -15,33 +15,20 @@ class API
      * Sends card message as POST request
      *
      * @param CardInterface $card
-     * @param bool $sendInBackground
+     * @param bool $sendInBackground Dabei kann die Zustellung nicht garantiert werden, der Versand geht aber schneller
      * @return bool
      * @throws Exception
      */
     public function send(CardInterface $card, $sendInBackground = false)
     {
-        $forkingWorked = true;
-        if ($sendInBackground) {
-            $pid = pcntl_fork();
-            if ($pid == -1) {
-                $forkingWorked = false;
-            } else if ($pid) {
-                // Wir sind der Elternprozess
-                pcntl_wait($status); //Schützt uns vor Zombie Kindern
-                return true;
-            }
-        }
-
         $response = $card->getResponse();
-        $response['@context"']= 'http://schema.org/extensions';
-        $response['@type"']= 'MessageCard';
+        $response['@context"'] = 'http://schema.org/extensions';
+        $response['@type"'] = 'MessageCard';
 
         $json = json_encode($response);
 
-        $curl = curl_init($this->webhookUrl);
-        curl_setopt_array($curl, array(
-            CURLOPT_RETURNTRANSFER => 1,
+        $curlOptions = array(
+            CURLOPT_RETURNTRANSFER => true,
             CURLOPT_CUSTOMREQUEST => 'POST',
             CURLOPT_SAFE_UPLOAD => true,
             CURLOPT_POSTFIELDS => $json,
@@ -51,12 +38,26 @@ class API
                 'Content-Type: application/json',
                 'Content-Length: ' . strlen($json)
             ],
-        ));
+        );
+
+        if ($sendInBackground) {
+            unset($curlOptions[CURLOPT_TIMEOUT_MS]);
+            $curlOptions[CURLOPT_RETURNTRANSFER] = false;
+            $curlOptions[CURLOPT_FORBID_REUSE] = true;
+            $curlOptions[CURLOPT_CONNECTTIMEOUT] = 1;
+            $curlOptions[CURLOPT_TIMEOUT_MS] = 500;
+            $curlOptions[CURLOPT_HEADER] = false;
+        }
+
+        $curl = curl_init($this->webhookUrl);
+        curl_setopt_array($curl, $curlOptions);
 
         $result = curl_exec($curl);
 
-        if ($result !== "1" || curl_errno($curl)) {
-            throw new Exception('Teams API call failed: ' . curl_error($curl), curl_errno($curl));
+        if (!$sendInBackground) {
+            if ($result !== "1" || curl_errno($curl)) {
+                throw new Exception('Teams API call failed: ' . curl_error($curl), curl_errno($curl));
+            }
         }
 
         curl_close($curl);
