@@ -15,11 +15,24 @@ class API
      * Sends card message as POST request
      *
      * @param CardInterface $card
+     * @param bool $sendInBackground
      * @return bool
      * @throws Exception
      */
-    public function send(CardInterface $card)
+    public function send(CardInterface $card, $sendInBackground = false)
     {
+        $forkingWorked = true;
+        if ($sendInBackground) {
+            $pid = pcntl_fork();
+            if ($pid == -1) {
+                $forkingWorked = false;
+            } else if ($pid) {
+                // Wir sind der Elternprozess
+                pcntl_wait($status); //Schützt uns vor Zombie Kindern
+                return true;
+            }
+        }
+
         $response = $card->getResponse();
         $response['@context"']= 'http://schema.org/extensions';
         $response['@type"']= 'MessageCard';
@@ -47,6 +60,11 @@ class API
         }
 
         curl_close($curl);
+
+        if ($sendInBackground && $forkingWorked) {
+            exit;
+        }
+
         return true;
     }
 }
