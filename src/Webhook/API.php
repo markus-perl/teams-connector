@@ -2,6 +2,8 @@
 
 namespace TeamsConnector\Webhook;
 
+use TeamsConnector\Exception;
+
 class API
 {
     private $webhookUrl;
