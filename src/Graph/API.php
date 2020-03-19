@@ -2,6 +2,8 @@
 
 namespace TeamsConnector\Graph;
 
+use Microsoft\Graph\Exception\GraphException;
+use Microsoft\Graph\Model\Channel;
 use Microsoft\Graph\Model\PlannerBucket;
 use Microsoft\Graph\Model\PlannerPlan;
 use Microsoft\Graph\Model\Team;
@@ -172,7 +174,7 @@ class API
     /**
      * @param string $planId
      * @return PlannerPlan
-     * @throws \Microsoft\Graph\Exception\GraphException
+     * @throws GraphException
      */
     public function getPlan(string $planId)
     {
@@ -194,7 +196,7 @@ class API
      * @param PlannerBucket $bucket
      * @param string $title
      * @return mixed
-     * @throws \Microsoft\Graph\Exception\GraphException
+     * @throws GraphException
      */
     public function createPlannerTask(PlannerPlan $plan, PlannerBucket $bucket, string $title)
     {
@@ -208,8 +210,8 @@ class API
     }
 
     /**
-     * @return Team
-     * @throws \Microsoft\Graph\Exception\GraphException
+     * @return Team[]
+     * @throws GraphException
      */
     public function getJoinedTeams()
     {
@@ -221,7 +223,7 @@ class API
     /**
      * @param Team $team
      * @return Channel[]
-     * @throws \Microsoft\Graph\Exception\GraphException
+     * @throws GraphException
      */
     public function getChannelsByTeam(\Microsoft\Graph\Model\Team $team)
     {
@@ -232,10 +234,10 @@ class API
 
     /**
      * @param Team $team
-     * @param \Microsoft\Graph\Model\Channel $channel
+     * @param Channel $channel
      * @param Message $message
      * @return mixed
-     * @throws \Microsoft\Graph\Exception\GraphException
+     * @throws GraphException
      */
     public function postMessage(\Microsoft\Graph\Model\Team $team, \Microsoft\Graph\Model\Channel $channel, Message $message)
     {
