@@ -1,9 +1,12 @@
 <?php
+
 namespace TeamsConnector\Graph;
 
 use Microsoft\Graph\Model\PlannerBucket;
 use Microsoft\Graph\Model\PlannerPlan;
+use Microsoft\Graph\Model\Team;
 use TeamsConnector\Graph\Team\Channel\Message;
+use TeamsConnector\Session\SessionInterface;
 
 class API
 {
@@ -18,13 +21,16 @@ class API
     private $redirectUri = 'http://localhost/';
     private $scopes = 'openid profile offline_access user.read calendars.read group.read.all group.readwrite.all';
 
-    public function __construct(string $clientSecret, string $clientId)
+    private $session;
+
+    public function __construct(string $clientSecret, string $clientId, SessionInterface $session)
     {
         $this->clientSecret = $clientSecret;
         $this->clientId = $clientId;
-        $this->accessToken = $_SESSION['ms_access_token'] ?? null;
-        $this->refreshToken = $_SESSION['ms_refresh_token'] ?? null;
-        $this->tokenExpires = $_SESSION['ms_token_expires'] ?? null;
+        $this->accessToken = $this->session->get('accessToken');
+        $this->refreshToken = $this->session->get('refreshToken');
+        $this->tokenExpires = $this->session->get('tokenExpires');
+        $this->session = $session;
     }
 
     /**
@@ -48,9 +54,9 @@ class API
                     $this->accessToken = $token->getToken();
                     $this->refreshToken = $token->getRefreshToken();
                     $this->tokenExpires = $token->getExpires();
-                    $_SESSION['ms_access_token'] = $this->accessToken;
-                    $_SESSION['ms_refresh_token'] = $this->refreshToken;
-                    $_SESSION['ms_token_expires'] = $this->tokenExpires;
+                    $this->session->set('accessToken', $this->accessToken);
+                    $this->session->set('refreshToken', $this->refreshToken);
+                    $this->session->set('tokenExpires', $this->tokenExpires);
                 }
             }
 
@@ -97,7 +103,7 @@ class API
         $authUrl = $oauthClient->getAuthorizationUrl();
 
         // Save client state so we can validate in callback
-        $_SESSION['oauthState'] = $oauthClient->getState();
+        $this->session->set('oauthState', $oauthClient->getState());
 
         return $authUrl;
     }
@@ -105,8 +111,8 @@ class API
     public function getAccessTokenByCode(string $authCode, string $providedState)
     {
         // Validate state
-        $expectedState = $_SESSION['oauthState'];
-        $_SESSION['oauthState'] = null;
+        $expectedState = $this->session->get('oauthState');
+        $this->session->set('oauthState', null);
 
         if (!isset($expectedState)) {
             echo 'expected state missing';
@@ -159,8 +165,8 @@ class API
             'refresh_token' => $this->refreshToken,
         ]);
 
-        $_SESSION['ms_access_token'] = $token->getToken();
-        $_SESSION['ms_token_expires'] = $token->getExpires();
+        $this->session->set('accessToken', $token->getToken());
+        $this->session->set('tokenExpires', $token->getExpires());
     }
 
     /**
@@ -201,6 +207,10 @@ class API
             ->execute();
     }
 
+    /**
+     * @return Team
+     * @throws \Microsoft\Graph\Exception\GraphException
+     */
     public function getJoinedTeams()
     {
         return $this->getGraphBeta()->createRequest('GET', '/me/joinedTeams')
@@ -208,12 +218,25 @@ class API
             ->execute();
     }
 
-    public function getChannelsByTeam(\Microsoft\Graph\Model\Team $team) {
+    /**
+     * @param Team $team
+     * @return Channel[]
+     * @throws \Microsoft\Graph\Exception\GraphException
+     */
+    public function getChannelsByTeam(\Microsoft\Graph\Model\Team $team)
+    {
         return $this->getGraphBeta()->createRequest('GET', '/teams/' . $team->getId() . '/channels')
             ->setReturnType(\Microsoft\Graph\Model\Channel::class)
             ->execute();
     }
 
+    /**
+     * @param Team $team
+     * @param \Microsoft\Graph\Model\Channel $channel
+     * @param Message $message
+     * @return mixed
+     * @throws \Microsoft\Graph\Exception\GraphException
+     */
     public function postMessage(\Microsoft\Graph\Model\Team $team, \Microsoft\Graph\Model\Channel $channel, Message $message)
     {
         return $this->getGraphBeta()->createRequest('POST', '/teams/' . $team->getId() . '/channels/' . $channel->getId() . '/messages')
