@@ -23,16 +23,18 @@ class API
     private $redirectUri = 'http://localhost/';
     private $scopes = 'openid profile offline_access user.read calendars.read group.read.all group.readwrite.all';
 
+    private $retries = 0;
+
     private $session;
 
     public function __construct(string $clientSecret, string $clientId, SessionInterface $session)
     {
+        $this->session = $session;
         $this->clientSecret = $clientSecret;
         $this->clientId = $clientId;
         $this->accessToken = $this->session->get('accessToken');
         $this->refreshToken = $this->session->get('refreshToken');
         $this->tokenExpires = $this->session->get('tokenExpires');
-        $this->session = $session;
     }
 
     /**
@@ -169,6 +171,8 @@ class API
 
         $this->session->set('accessToken', $token->getToken());
         $this->session->set('tokenExpires', $token->getExpires());
+        $this->accessToken = $token->getToken();
+        $this->tokenExpires = $token->getExpires();
     }
 
     /**
@@ -215,9 +219,28 @@ class API
      */
     public function getJoinedTeams()
     {
-        return $this->getGraphBeta()->createRequest('GET', '/me/joinedTeams')
-            ->setReturnType(\Microsoft\Graph\Model\Team::class)
-            ->execute();
+        try {
+            return $this->getGraphBeta()->createRequest('GET', '/me/joinedTeams')
+                ->setReturnType(\Microsoft\Graph\Model\Team::class)
+                ->execute();
+        } catch (\Exception $e) {
+            if ($this->shouldRetry($e)) {
+                return $this->getJoinedTeams();
+            }
+        }
+    }
+
+    private function shouldRetry(\Exception $e)
+    {
+        if (substr_count($e->getMessage(), 401)) {
+            if ($this->retries > 0) {
+                throw $e;
+            }
+
+            $this->refreshToken();
+            $this->retries++;
+            return true;
+        }
     }
 
     /**
