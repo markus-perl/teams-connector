@@ -27,7 +27,7 @@ class API
 
     private $session;
 
-    public function __construct(string $clientSecret, string $clientId, SessionInterface $session)
+    public function __construct(string $clientSecret, string $clientId, SessionInterface $session, $redirectUri)
     {
         $this->session = $session;
         $this->clientSecret = $clientSecret;
@@ -35,6 +35,7 @@ class API
         $this->accessToken = $this->session->get('accessToken');
         $this->refreshToken = $this->session->get('refreshToken');
         $this->tokenExpires = $this->session->get('tokenExpires');
+        $this->redirectUri = $redirectUri;
     }
 
     /**
@@ -49,11 +50,12 @@ class API
 
             //Token aktualisieren, wenn abgelaufen oder kurz vorm ablaufen
             if ($this->tokenExpires > 0 && $this->tokenExpires < time() - 60) {
-                $this->refreshToken();
+             //   $this->refreshToken();
             }
 
             if ($code && $state) {
                 $token = $this->getAccessTokenByCode($code, $state);
+
                 if ($token) {
                     $this->accessToken = $token->getToken();
                     $this->refreshToken = $token->getRefreshToken();
@@ -65,7 +67,8 @@ class API
             }
 
             if ($this->accessToken == null) {
-                header('Location: ' . $this->getSignInUrl());
+                echo json_encode(['url' => $this->getSignInUrl()]);
+                http_response_code(400);
                 exit;
             }
         }
@@ -114,6 +117,7 @@ class API
 
     public function getAccessTokenByCode(string $authCode, string $providedState)
     {
+
         // Validate state
         $expectedState = $this->session->get('oauthState');
         $this->session->set('oauthState', null);
@@ -127,7 +131,6 @@ class API
             echo 'wrong state';
             return false;
         }
-
 
         // Authorization code should be in the 'code' query param
         if ($authCode) {
