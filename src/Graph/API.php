@@ -268,6 +268,7 @@ class API
     public function postMessage(\Microsoft\Graph\Model\Team $team, \Microsoft\Graph\Model\Channel $channel, Message $message)
     {
         return $this->getGraphBeta()->createRequest('POST', '/teams/' . $team->getId() . '/channels/' . $channel->getId() . '/messages')
+            ->setTimeout(10)
             ->attachBody($message->getBody())
             ->execute();
     }
